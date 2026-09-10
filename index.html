@@ -40,7 +40,6 @@
             gap: 12px;
         }
 
-        /* Видеоплеер техники */
         .video-container {
             width: 100%;
             height: 240px;
@@ -69,7 +68,6 @@
             font-size: 13px;
         }
 
-        /* Карточка тренировки */
         .card {
             background: var(--card-bg);
             border-radius: 16px;
@@ -100,10 +98,24 @@
             font-size: 13px;
             color: var(--text-muted);
             line-height: 1.4;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
-        /* Поля ввода (ровно 50/50) */
+        /* Индикатор прошлого результата */
+        .history-badge {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 230, 118, 0.08);
+            border: 1px dashed rgba(0, 230, 118, 0.3);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+            color: var(--accent-color);
+            margin-bottom: 14px;
+            font-weight: 500;
+        }
+
         .inputs-row {
             display: flex;
             gap: 10px;
@@ -160,7 +172,6 @@
             background: var(--accent-active);
         }
 
-        /* Таймер отдыха */
         .timer-overlay {
             display: none;
             flex-direction: column;
@@ -197,7 +208,7 @@
     <div class="video-container">
         <video id="workoutVideo" autoplay loop muted playsinline referrerpolicy="no-referrer"></video>
         <div class="video-fallback" id="videoFallback">
-            📹 Предпросмотр видео ограничен источником.<br>Следуйте технике и таймерам ниже.
+            📹 Предпросмотр видео недоступен.<br>Ориентируйтесь на описание и таймеры.
         </div>
     </div>
 
@@ -205,6 +216,12 @@
         <div class="set-badge" id="setCounter">Подход 1 из 3</div>
         <h1 class="exercise-title" id="exTitle">Загрузка...</h1>
         <div class="exercise-tip" id="exTip">...</div>
+
+        <!-- Плашка с прошлым рекордом -->
+        <div class="history-badge" id="historyBadge">
+            <span>📈</span>
+            <span id="historyText">Прошлый раз: 0 кг × 0</span>
+        </div>
 
         <div class="inputs-row">
             <div class="input-group">
@@ -250,11 +267,18 @@
 
     const video = document.getElementById('workoutVideo');
     const fallback = document.getElementById('videoFallback');
+    const historyBadge = document.getElementById('historyBadge');
+    const historyText = document.getElementById('historyText');
 
     video.onerror = () => {
         video.style.display = 'none';
         fallback.style.display = 'block';
     };
+
+    // Нормализация названия для точного сопоставления
+    function getStorageKey(name) {
+        return "fit_ex_" + name.toLowerCase().replace(/[^a-zа-я0-9]/g, "");
+    }
 
     function loadExercise() {
         if (!workoutData.exercises || workoutData.exercises.length === 0) {
@@ -267,7 +291,27 @@
         document.getElementById('exTitle').innerText = ex.name;
         document.getElementById('exTip').innerText = ex.technique_tip || "";
         document.getElementById('setCounter').innerText = `Подход ${currentSet} из ${ex.sets}`;
-        document.getElementById('inputReps').value = parseInt(ex.reps) || 10;
+
+        // Проверяем историю по сохраненному ключу
+        const key = getStorageKey(ex.name);
+        const savedHistory = JSON.parse(localStorage.getItem(key) || "null");
+
+        if (savedHistory) {
+            // Если есть данные конкретно по этому подходу или последний зафиксированный вес
+            const setData = savedHistory.sets?.[currentSet] || savedHistory.last;
+            
+            historyBadge.style.display = 'flex';
+            historyText.innerText = `Прошлый раз: ${setData.weight} кг × ${setData.reps} повт.`;
+
+            // Автоматическая подстановка прошлого веса и повторов
+            document.getElementById('inputWeight').value = setData.weight || 0;
+            document.getElementById('inputReps').value = setData.reps || parseInt(ex.reps) || 10;
+        } else {
+            // Если делаем первый раз в жизни
+            historyBadge.style.display = 'none';
+            document.getElementById('inputWeight').value = "";
+            document.getElementById('inputReps').value = parseInt(ex.reps) || 10;
+        }
 
         if (workoutData.videoUrl && video.src !== workoutData.videoUrl) {
             video.src = workoutData.videoUrl;
@@ -294,6 +338,19 @@
 
     function finishSet() {
         const ex = workoutData.exercises[currentExIndex];
+        const weight = parseFloat(document.getElementById('inputWeight').value) || 0;
+        const reps = parseInt(document.getElementById('inputReps').value) || 0;
+
+        // Сохраняем результат в память браузера
+        const key = getStorageKey(ex.name);
+        let history = JSON.parse(localStorage.getItem(key) || '{"sets":{}}');
+        
+        history.sets = history.sets || {};
+        history.sets[currentSet] = { weight: weight, reps: reps };
+        history.last = { weight: weight, reps: reps, date: new Date().toLocaleDateString('ru-RU') };
+        
+        localStorage.setItem(key, JSON.stringify(history));
+
         startRest(ex.rest_seconds || 45);
     }
 
@@ -332,7 +389,7 @@
                 currentExIndex++;
                 currentSet = 1;
             } else {
-                alert("Тренировка завершена!");
+                alert("🎉 Тренировка успешно завершена! Результаты сохранены.");
                 if (tg) tg.close();
                 return;
             }
