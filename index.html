@@ -6,41 +6,46 @@
     <title>FitSaver Workout</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         :root {
-            --bg-color: #0f1115;
-            --card-bg: #1a1d24;
+            --bg-color: #0d0f12;
+            --card-bg: #161920;
             --accent-color: #00e676;
             --accent-active: #00b359;
             --text-main: #ffffff;
-            --text-muted: #8b95a5;
-            --border-color: #262c36;
+            --text-muted: #8e95a2;
+            --border-color: #242933;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
-            margin: 0;
-            padding: 16px;
-            box-sizing: border-box;
+            padding: 12px;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            justify-content: center;
         }
 
         .container {
             width: 100%;
-            max-width: 440px;
+            max-width: 420px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
         }
 
+        /* Видеоплеер техники */
         .video-container {
             width: 100%;
-            height: 250px;
-            background: #15181f;
-            border-radius: 16px;
+            height: 240px;
+            background: #000;
+            border-radius: 14px;
             overflow: hidden;
             position: relative;
             border: 1px solid var(--border-color);
@@ -58,23 +63,36 @@
 
         .video-fallback {
             display: none;
-            padding: 20px;
+            padding: 16px;
             text-align: center;
             color: var(--text-muted);
             font-size: 13px;
         }
 
+        /* Карточка тренировки */
         .card {
             background: var(--card-bg);
             border-radius: 16px;
-            padding: 20px;
+            padding: 16px;
             border: 1px solid var(--border-color);
         }
 
+        .set-badge {
+            display: inline-block;
+            background: rgba(0, 230, 118, 0.12);
+            color: var(--accent-color);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
         .exercise-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
-            margin: 0 0 6px 0;
+            line-height: 1.3;
+            margin-bottom: 6px;
             color: var(--text-main);
         }
 
@@ -85,46 +103,45 @@
             margin-bottom: 16px;
         }
 
-        .set-badge {
-            display: inline-block;
-            background: rgba(0, 230, 118, 0.12);
-            color: var(--accent-color);
-            padding: 4px 10px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            margin-bottom: 12px;
-        }
-
+        /* Поля ввода (ровно 50/50) */
         .inputs-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 16px;
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 14px;
         }
 
         .input-group {
+            flex: 1;
+            min-width: 0;
             display: flex;
             flex-direction: column;
             gap: 6px;
         }
 
         .input-group label {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-muted);
             text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
         .input-group input {
-            background: #12141a;
+            width: 100%;
+            background: #0f1115;
             border: 1px solid var(--border-color);
             border-radius: 10px;
-            padding: 12px;
+            padding: 12px 6px;
             font-size: 18px;
-            font-weight: 600;
+            font-weight: 700;
             color: #fff;
             text-align: center;
             outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-color);
         }
 
         .btn-action {
@@ -133,18 +150,23 @@
             color: #000;
             border: none;
             border-radius: 12px;
-            padding: 16px;
+            padding: 15px;
             font-size: 16px;
             font-weight: 700;
             cursor: pointer;
         }
 
+        .btn-action:active {
+            background: var(--accent-active);
+        }
+
+        /* Таймер отдыха */
         .timer-overlay {
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: rgba(15, 17, 21, 0.96);
+            background: rgba(13, 15, 18, 0.96);
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             z-index: 100;
@@ -154,23 +176,25 @@
             font-size: 72px;
             font-weight: 800;
             color: var(--accent-color);
+            font-variant-numeric: tabular-nums;
         }
 
         .btn-skip {
             background: transparent;
             border: 1px solid var(--border-color);
             color: #fff;
-            padding: 12px 24px;
-            border-radius: 10px;
+            padding: 10px 20px;
+            border-radius: 8px;
             cursor: pointer;
             margin-top: 20px;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="video-container" id="videoWrapper">
+    <div class="video-container">
         <video id="workoutVideo" autoplay loop muted playsinline referrerpolicy="no-referrer"></video>
         <div class="video-fallback" id="videoFallback">
             📹 Предпросмотр видео ограничен источником.<br>Следуйте технике и таймерам ниже.
@@ -210,7 +234,6 @@
         tg.expand();
     }
 
-    // Чтение динамических данных из параметров URL
     const urlParams = new URLSearchParams(window.location.search);
     const rawData = urlParams.get('data');
     let workoutData = { exercises: [], videoUrl: "" };
@@ -218,9 +241,7 @@
     if (rawData) {
         try {
             workoutData = JSON.parse(decodeURIComponent(rawData));
-        } catch (e) {
-            console.error("Ошибка парсинга:", e);
-        }
+        } catch (e) {}
     }
 
     let currentExIndex = 0;
@@ -238,7 +259,7 @@
     function loadExercise() {
         if (!workoutData.exercises || workoutData.exercises.length === 0) {
             document.getElementById('exTitle').innerText = "Нет данных";
-            document.getElementById('exTip').innerText = "Передайте тренировку через Telegram-бота.";
+            document.getElementById('exTip').innerText = "Отправьте тренировку боту.";
             return;
         }
 
@@ -311,7 +332,7 @@
                 currentExIndex++;
                 currentSet = 1;
             } else {
-                alert("Тренировка завершена! Отличная работа.");
+                alert("Тренировка завершена!");
                 if (tg) tg.close();
                 return;
             }
