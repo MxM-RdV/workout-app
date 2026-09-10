@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FitSaver Workout</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --card-bg: #1a1d24;
+            --accent-color: #00e676;
+            --accent-active: #00b359;
+            --text-main: #ffffff;
+            --text-muted: #8b95a5;
+            --border-color: #262c36;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 440px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Видеоплеер с техникой */
+        .video-container {
+            width: 100%;
+            height: 240px;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--border-color);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .exercise-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 6px 0;
+            color: var(--text-main);
+        }
+
+        .exercise-tip {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+
+        .set-badge {
+            display: inline-block;
+            background: rgba(0, 230, 118, 0.12);
+            color: var(--accent-color);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        /* Ввод веса и повторений */
+        .inputs-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-group input {
+            background: #12141a;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            text-align: center;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-color);
+        }
+
+        /* Кнопка завершения сета */
+        .btn-action {
+            width: 100%;
+            background: var(--accent-color);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .btn-action:active {
+            background: var(--accent-active);
+        }
+
+        /* Оверлей таймера отдыха */
+        .timer-overlay {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 17, 21, 0.95);
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .timer-val {
+            font-size: 72px;
+            font-weight: 800;
+            color: var(--accent-color);
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 8px;
+        }
+
+        .timer-sub {
+            color: var(--text-muted);
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        .btn-skip {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Зацикленное видео упражнения -->
+    <div class="video-container">
+        <video id="workoutVideo" autoplay loop muted playsinline>
+            <source src="" type="video/mp4">
+        </video>
+    </div>
+
+    <!-- Карточка выполнения -->
+    <div class="card">
+        <div class="set-badge" id="setCounter">Подход 1 из 3</div>
+        <h1 class="exercise-title" id="exTitle">Загрузка упражнения...</h1>
+        <div class="exercise-tip" id="exTip">Совет по биомеханике движения</div>
+
+        <div class="inputs-row">
+            <div class="input-group">
+                <label>Вес (кг)</label>
+                <input type="number" id="inputWeight" placeholder="0" step="0.5">
+            </div>
+            <div class="input-group">
+                <label>Повторения</label>
+                <input type="number" id="inputReps" placeholder="10">
+            </div>
+        </div>
+
+        <button class="btn-action" id="completeBtn" onclick="finishSet()">Подход выполнен</button>
+    </div>
+</div>
+
+<!-- Модальный экран таймера отдыха -->
+<div class="timer-overlay" id="timerOverlay">
+    <div class="timer-val" id="timerSeconds">60</div>
+    <div class="timer-sub">Отдых между подходами</div>
+    <button class="btn-skip" onclick="skipTimer()">Пропустить отдых</button>
+</div>
+
+<script>
+    // Инициализация Telegram Web App
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+        tg.ready();
+        tg.expand();
+    }
+
+    // Предотвращение выключения экрана (Wake Lock API)
+    async function initWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                await navigator.wakeLock.request('screen');
+            }
+        } catch (err) {}
+    }
+    initWakeLock();
+
+    // Тестовый комплекс (в продакшене данные приходят из API бота)
+    const workoutData = {
+        videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        exercises: [
+            { name: "Приседания со штангой", sets: 3, reps: "10-12", rest: 45, tip: "Держи спину прямой, колени не своди внутрь." },
+            { name: "Румынская тяга", sets: 3, reps: "12", rest: 60, tip: "Отводи таз назад, движение за счет бицепса бедра." }
+        ]
+    };
+
+    let currentExIndex = 0;
+    let currentSet = 1;
+    let timerInterval = null;
+    let loggedHistory = [];
+
+    function loadExercise() {
+        const ex = workoutData.exercises[currentExIndex];
+        document.getElementById('exTitle').innerText = ex.name;
+        document.getElementById('exTip').innerText = ex.tip;
+        document.getElementById('setCounter').innerText = `Подход ${currentSet} из ${ex.sets}`;
+        document.getElementById('inputReps').value = parseInt(ex.reps) || 10;
+        
+        const video = document.getElementById('workoutVideo');
+        if (video.src !== workoutData.videoUrl) {
+            video.src = workoutData.videoUrl;
+            video.play();
+        }
+    }
+
+    function playBeep() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 750;
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.25);
+        } catch (e) {}
+    }
+
+    function finishSet() {
+        const weight = parseFloat(document.getElementById('inputWeight').value) || 0;
+        const reps = parseInt(document.getElementById('inputReps').value) || 0;
+        const ex = workoutData.exercises[currentExIndex];
+
+        // Запись в историю весов
+        loggedHistory.push({
+            exercise: ex.name,
+            set: currentSet,
+            weight: weight,
+            reps: reps,
+            timestamp: new Date().toISOString()
+        });
+        localStorage.setItem("fit_history", JSON.stringify(loggedHistory));
+
+        // Запуск автотаймера
+        startRest(ex.rest);
+    }
+
+    function startRest(seconds) {
+        const overlay = document.getElementById('timerOverlay');
+        const timerText = document.getElementById('timerSeconds');
+        overlay.style.display = 'flex';
+        
+        let remaining = seconds;
+        timerText.innerText = remaining;
+
+        timerInterval = setInterval(() => {
+            remaining--;
+            timerText.innerText = remaining;
+            if (remaining <= 0) {
+                clearInterval(timerInterval);
+                playBeep();
+                overlay.style.display = 'none';
+                advanceProgress();
+            }
+        }, 1000);
+    }
+
+    function skipTimer() {
+        clearInterval(timerInterval);
+        document.getElementById('timerOverlay').style.display = 'none';
+        advanceProgress();
+    }
+
+    function advanceProgress() {
+        const ex = workoutData.exercises[currentExIndex];
+        if (currentSet < ex.sets) {
+            currentSet++;
+        } else {
+            if (currentExIndex < workoutData.exercises.length - 1) {
+                currentExIndex++;
+                currentSet = 1;
+            } else {
+                alert("🎉 Тренировка завершена! Все подходы зафиксированы.");
+                if (tg) tg.close();
+                return;
+            }
+        }
+        loadExercise();
+    }
+
+    loadExercise();
+</script>
+
+</body>
+</html>
